@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Tres en Raya</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.0.0"></script>
+    <style>
+  body {
+    background: linear-gradient(to right, #fdfbfb, #ebedee);
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+  }
+
+  h1 {
+    color: #333;
+    margin-bottom: 20px;
+  }
+
+  table {
+    border-collapse: collapse;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    background-color: white;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  td {
+    width: 80px;
+    height: 80px;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 40px;
+    font-weight: bold;
+    border: 1px solid #ccc;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.1s ease-in-out;
+  }
+
+  td:hover {
+    background-color: #f0f0f0;
+    transform: scale(1.05);
+  }
+
+  td:active {
+    transform: scale(0.95);
+  }
+
+  td::selection {
+    background: none;
+  }
+
+  td:empty {
+    color: #333;
+  }
+
+  td:empty:hover {
+    background-color: #e0f7fa;
+  }
+
+  td:contains("X") {
+    color: #2c3e50;
+  }
+
+  td:contains("O") {
+    color: #c0392b;
+  }
+</style>
+
+  </head>
+  <body>
+    <h1 style="text-align: center">Tres en Raya</h1>
+    <table id="board"></table>
+    <script>
+      let model;
+      let board = Array(9).fill(0); // 1: Humano, -1: IA, 0: vacío
+
+      const renderBoard = () => {
+        const table = document.getElementById("board");
+        table.innerHTML = "";
+        for (let i = 0; i < 3; i++) {
+          const row = table.insertRow();
+          for (let j = 0; j < 3; j++) {
+            const cell = row.insertCell();
+            const idx = i * 3 + j;
+            cell.textContent =
+              board[idx] === 1 ? "X" : board[idx] === -1 ? "O" : "";
+            if (board[idx] === 0) {
+              cell.addEventListener("click", () => playerMove(idx));
+            }
+          }
+        }
+      };
+
+      const playerMove = async (idx) => {
+        if (board[idx] !== 0) return;
+        board[idx] = 1;
+        renderBoard();
+        await iaMove();
+        renderBoard();
+      };
+
+      const iaMove = async () => {
+        const input = tf.tensor(board).reshape([1, 9]);
+        const prediction = model.predict(input);
+        const moveScores = prediction.reshape([9]).arraySync();
+        let bestMove = -1,
+          bestScore = -Infinity;
+        for (let i = 0; i < moveScores.length; i++) {
+          if (board[i] === 0 && moveScores[i] > bestScore) {
+            bestScore = moveScores[i];
+            bestMove = i;
+          }
+        }
+        if (bestMove !== -1) board[bestMove] = -1;
+      };
+
+      tf.ready().then(async () => {
+        model = await tf.loadLayersModel("model/ttt_model.json");
+        renderBoard();
+      });
+    </script>
+  </body>
+</html>
